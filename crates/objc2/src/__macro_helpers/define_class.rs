@@ -217,6 +217,28 @@ fn class_not_unique(c_name: &CStr) -> ! {
     panic!("could not create new class {c_name:?}, perhaps a class with that name already exists?")
 }
 
+#[cfg(feature = "unique-class-names")]
+fn add_random_suffix(base_name: &CStr) -> std::ffi::CString {
+    use std::collections::hash_map::RandomState;
+    use std::ffi::CString;
+    use std::hash::{BuildHasher, Hasher};
+
+    let suffix = RandomState::new().build_hasher().finish();
+    let mut name = base_name.to_bytes().to_vec();
+    name.extend_from_slice(std::format!("_{suffix:016x}").as_bytes());
+    CString::new(name).expect("class name contains no NUL bytes")
+}
+
+#[cfg(feature = "unique-class-names")]
+fn unique_class_builder(base: &CStr, superclass: &AnyClass) -> ClassBuilder {
+    loop {
+        let name = add_random_suffix(base);
+        if let Some(builder) = ClassBuilder::new(&name, superclass) {
+            return builder;
+        }
+    }
+}
+
 #[inline]
 #[track_caller]
 #[allow(clippy::new_without_default)]
@@ -231,7 +253,17 @@ where
     let (ivar_name, drop_flag_name) = ivar_drop_flag_names::<T>();
 
     let superclass = <T::Super as ClassType>::class();
-    let cls = if let Some(builder) = ClassBuilder::new(c_name, superclass) {
+
+    #[cfg(feature = "unique-class-names")]
+    let builder = if name_is_auto_generated {
+        Some(unique_class_builder(c_name, superclass))
+    } else {
+        ClassBuilder::new(c_name, superclass)
+    };
+    #[cfg(not(feature = "unique-class-names"))]
+    let builder = ClassBuilder::new(c_name, superclass);
+
+    let cls = if let Some(builder) = builder {
         let mut this = ClassBuilderHelper {
             builder,
             p: PhantomData,

@@ -50,6 +50,8 @@ relax-void-encoding = []
 # instead of `UInt`.
 relax-sign-encoding = []
 
+unique-class-names = ["std"]
+
 # Fully disable debug assertions on invalid encodings.
 #
 # Sometimes, the method encoding registered with the runtime doesn't match the
