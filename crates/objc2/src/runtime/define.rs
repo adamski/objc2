@@ -3,10 +3,12 @@ use alloc::ffi::CString;
 use alloc::format;
 use alloc::string::ToString;
 use core::ffi::CStr;
+use core::hash::{BuildHasher, Hasher};
 use core::mem;
 use core::mem::ManuallyDrop;
 use core::ptr;
 use core::ptr::NonNull;
+use std::hash::RandomState;
 
 use crate::encode::{Encode, EncodeArguments, EncodeReturn, Encoding};
 use crate::ffi;
@@ -207,6 +209,23 @@ impl ClassBuilder {
     #[inline]
     pub fn new(name: &CStr, superclass: &AnyClass) -> Option<Self> {
         Self::with_superclass(name, Some(superclass))
+    }
+
+    /// Constructs a [`ClassBuilder`] with the given name and superclass.
+    /// Appends a random suffix to the end of the class name at runtime.
+    ///
+    /// Returns [`None`] if the class couldn't be allocated, or a class with
+    /// that name already exist.
+    #[inline]
+    pub fn new_unique(base_name: &CStr, superclass: &AnyClass) -> Option<Self> {
+        let random = RandomState::new().build_hasher().finish();
+        let mut name_bytes = base_name.to_bytes().to_vec();
+        name_bytes.extend_from_slice(std::format!("_{random:016x}").as_bytes());
+
+        Self::with_superclass(
+            &CString::new(name_bytes).expect("Failed to construct class name"),
+            Some(superclass),
+        )
     }
 
     /// Constructs a [`ClassBuilder`] that will construct a new root class
