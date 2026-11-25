@@ -8,7 +8,7 @@ use core::mem;
 use core::mem::ManuallyDrop;
 use core::ptr;
 use core::ptr::NonNull;
-use std::hash::RandomState;
+use std::collections::hash_map::RandomState;
 
 use crate::encode::{Encode, EncodeArguments, EncodeReturn, Encoding};
 use crate::ffi;
@@ -211,8 +211,12 @@ impl ClassBuilder {
         Self::with_superclass(name, Some(superclass))
     }
 
-    /// Constructs a [`ClassBuilder`] with the given name and superclass.
-    /// Appends a random suffix to the end of the class name at runtime.
+    /// Constructs a [`ClassBuilder`] with the given superclass, and a name
+    /// made from `base_name` plus a random suffix of the form `_<16 hex>`.
+    ///
+    /// Use this when the same code may be loaded more than once into one
+    /// process (e.g. several plugins that each link their own copy), and
+    /// each copy must register its own class.
     ///
     /// Returns [`None`] if the class couldn't be allocated, or a class with
     /// that name already exist.
@@ -220,7 +224,7 @@ impl ClassBuilder {
     pub fn new_unique(base_name: &CStr, superclass: &AnyClass) -> Option<Self> {
         let random = RandomState::new().build_hasher().finish();
         let mut name_bytes = base_name.to_bytes().to_vec();
-        name_bytes.extend_from_slice(std::format!("_{random:016x}").as_bytes());
+        name_bytes.extend_from_slice(format!("_{random:016x}").as_bytes());
 
         Self::with_superclass(
             &CString::new(name_bytes).expect("Failed to construct class name"),
@@ -1115,7 +1119,15 @@ mod tests {
         );
 
         let cls = AutoName::class();
-        assert_eq!(cls.name().to_str().unwrap(), expected);
         assert_eq!(AutoName::NAME, expected);
+        let name = cls.name().to_str().unwrap();
+        if cfg!(feature = "unique-class-names") {
+            let suffix = name.strip_prefix(&*expected).unwrap();
+            assert_eq!(suffix.len(), 17, "{name}");
+            assert!(suffix.starts_with('_'), "{name}");
+            assert!(suffix[1..].bytes().all(|b| b.is_ascii_hexdigit()), "{name}");
+        } else {
+            assert_eq!(name, expected);
+        }
     }
 }

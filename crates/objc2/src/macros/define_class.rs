@@ -88,6 +88,14 @@
 /// If the name is auto-generated, the class will also be allowed to be used
 /// across multiple shared dynamic libraries in the same process.
 ///
+/// With the `"unique-class-names"` Cargo feature, an auto-generated name
+/// instead gets a random suffix at runtime (`"..._<16 hex digits>"`), so
+/// each copy of the code registers its own class. This is needed when
+/// several dynamic libraries (e.g. audio plugins) may contain the same class
+/// built from different code or with a different layout. With this feature,
+/// [`ClassType::NAME`][crate::ClassType::NAME] is only a prefix of the
+/// runtime name.
+///
 ///
 /// ### `#[ivars = ...]` (optional)
 ///

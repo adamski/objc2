@@ -234,7 +234,9 @@ where
 
     #[cfg(feature = "unique-class-names")]
     let builder = if name_is_auto_generated {
-        ClassBuilder::new_unique(c_name, superclass)
+        // Never fall back to reusing an existing class with the base name.
+        let builder = ClassBuilder::new_unique(c_name, superclass);
+        Some(builder.unwrap_or_else(|| class_not_present(c_name)))
     } else {
         ClassBuilder::new(c_name, superclass)
     };

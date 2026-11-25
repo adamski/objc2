@@ -587,7 +587,12 @@ fn auto_name() {
 
     let expected = format!("define_class::AutoName{}", env!("CARGO_PKG_VERSION"));
 
-    assert_eq!(AutoName::class().name().to_str().unwrap(), expected);
+    let name = AutoName::class().name().to_str().unwrap();
+    if cfg!(feature = "unique-class-names") {
+        assert!(name.starts_with(&*expected), "{name:?}");
+    } else {
+        assert_eq!(name, expected);
+    }
     assert_eq!(AutoName::NAME, expected);
 }
 

@@ -237,6 +237,10 @@ pub unsafe trait ClassType: Message {
     ///
     /// `T::NAME` is the `const` version of `T::class().name()`.
     ///
+    /// Exception: with the `"unique-class-names"` feature, classes from
+    /// [`define_class!`][crate::define_class] without an explicit name
+    /// register as `NAME` plus a random suffix.
+    ///
     /// This must not contain any NUL bytes.
     //
     // TODO: Convert this to CStr next time we do big changes to ClassType.

@@ -50,6 +50,9 @@ relax-void-encoding = []
 # instead of `UInt`.
 relax-sign-encoding = []
 
+# Give classes from `define_class!` without an explicit `#[name = ...]` a
+# random suffix at runtime, so that several copies of the same code (e.g. in
+# separate audio plugins loaded by one host) each register their own class.
 unique-class-names = ["std"]
 
 # Fully disable debug assertions on invalid encodings.
